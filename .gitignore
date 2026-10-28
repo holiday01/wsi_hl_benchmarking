@@ -7,3 +7,4 @@ __pycache__/
 *.h5
 paper_jbhi/
 research/
+.DS_Store

@@ -173,7 +173,7 @@ analysis plan and teacher-side analyses from `research/`; both are provided by t
 ## Data
 
 Run records, seed-pooled summaries, secondary, sensitivity and ablation analyses, the analysis plan and the per-pair
-atlas: DOI to be added.
+atlas: https://doi.org/10.5281/zenodo.23718050
 
 ## Licence
 
