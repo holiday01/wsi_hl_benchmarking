@@ -99,7 +99,7 @@ def verdict_table(summary):
              "center": "TCGA-BRCA site", "pannuke_seg": "PanNuke"}
     L = [r"\begin{table}[t]", r"\centering\footnotesize\setlength{\tabcolsep}{3.5pt}",
          r"\caption{Seed-pooled verdicts per task at the pre-specified margin $\delta=\margin$ (36 teacher--student pairs per task where all runs finished). "
-         r"$\delta_{\min}$: smallest margin at which a pair would be certified, median over pairs; inflation: cluster over tile standard error, median over runs; about 1 by construction where no cluster identifier exists or the cluster is the unit; --: not computed (PanNuke). E: equivalent; E$_{\mathrm{H}}$: after hierarchical Benjamini--Hochberg correction (teacher-on-task families); I$^-$, I$^+$: inequivalent, student below or above teacher; Inc.: inconclusive.}",
+         r"$\delta_{\min}$: smallest margin giving equivalence, median over pairs; inflation: cluster over tile standard error, median over runs; about 1 by construction where no cluster identifier exists or the cluster is the unit; --: not computed (PanNuke). E: equivalent; E$_{\mathrm{H}}$: after hierarchical Benjamini--Hochberg correction (teacher-on-task families); I$^-$, I$^+$: inequivalent, student below or above teacher; Inc.: inconclusive.}",
          r"\label{tab:verdicts}", r"\begin{tabular}{@{}lrrrrrrrr@{}}", r"\toprule",
          r"Task & Pairs & E & E$_{\mathrm{H}}$ & I$^-$ & I$^+$ & Inc. & $\tilde\delta_{\min}$ & Infl.\\", r"\midrule"]
     for task in TASK_ORDER:
