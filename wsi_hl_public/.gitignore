@@ -1,0 +1,9 @@
+outputs/
+__pycache__/
+*.pyc
+*.pt
+*.npy
+*.npz
+*.h5
+paper_jbhi/
+research/
