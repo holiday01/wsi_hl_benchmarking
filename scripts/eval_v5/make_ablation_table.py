@@ -45,7 +45,7 @@ def main():
                 f"\\newcommand{{\\abl{m}Controls}}{{{controls(r)}}}"]
     rows = rows[:-1]
     tex = [r"\begin{table}[h]\centering\footnotesize\setlength{\tabcolsep}{3pt}",
-           r"\caption{Targeted PanNuke-exposure ablation (analysis plan, amendment \preregTissueCommit): ViT-B student, seed 42, "
+           r"\caption{Targeted PanNuke-exposure ablation (not pre-specified): ViT-B student, seed 42, "
            r"distilled with the PanNuke tiles removed from the corpus and otherwise the identical recipe, against the original "
            r"student of the same teacher, size and seed. $d_{\mathrm{abl}}$ = metric(ablated) $-$ metric(original) with paired "
            r"90\,\% bootstrap interval (per image for PanNuke, per cluster otherwise), verdict at $\delta=0.05$; last column, "

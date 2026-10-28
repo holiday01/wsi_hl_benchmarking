@@ -35,7 +35,7 @@ def main():
          r"Main: pre-specified analysis (probe $C=1$, one seed drawn per bootstrap replicate, site folds by slide). Seed mean: interval for the mean of the three seeds' $d$. "
          r"$C=0.1$, $C=10$: every classification probe refitted (PanNuke not refitted). Site by patient: site-task folds grouped by patient. "
          r"Centred: the same bootstrap replicates centred on the estimate (basic interval, centred tail $p$-values) instead of the pre-specified percentile interval. "
-         r"These analyses were run after the main results. --: not run.}\label{tab:s_sensitivity}",
+         r"These analyses are not pre-specified. --: not run.}\label{tab:s_sensitivity}",
          r"\begin{tabular}{@{}l" + "r" * len(data) + r"@{}}", r"\toprule",
          "Task & " + " & ".join(n for n, _ in data) + r"\\", r"\midrule"]
     for key, label in TASKS:

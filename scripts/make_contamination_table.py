@@ -51,8 +51,8 @@ def main():
          r"$\bullet$ in the disclosed corpus; $\circ$ possible same-source overlap (cohort derived from TCGA, TCGA in the corpus); "
          r"$\times$ excluded by an explicit developer statement; -- not in a corpus disclosed as one institution or an enumerated "
          r"list (absence from the list, not verified disjointness); ? proprietary, undisclosed or open-ended corpus (CONCH: PubMed "
-         r"figures; Virchow2: partner institutions). Several teachers used CAMELYON- or PANDA-derived patches for evaluation only. Overlap may raise the "
-         r"teacher's absolute score and the task ceiling and so bias $d$ against the student (not measured).}\label{tab:s_sources}",
+         r"figures; Virchow2: partner institutions). Several teachers used CAMELYON- or PANDA-derived patches for evaluation only. Pretraining overlap may "
+         r"affect teacher--student comparisons; its magnitude and direction were not assessed.}\label{tab:s_sources}",
          r"\begin{tabular}{@{}llcccccccc@{}}", r"\toprule",
          "Teacher & Corpus (as disclosed) & " + " & ".join(cols) + r"\\", r"\midrule"]
     for t in ORDER:

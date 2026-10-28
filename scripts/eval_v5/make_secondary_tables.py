@@ -45,7 +45,7 @@ def fnum(x, fmt="{:.3f}"):
 def external_table(summary):
     L = [r"\begin{table}[h]\centering\small",
          r"\caption{External pair H-optimus-0 $\rightarrow$ H0-mini under the identical probe, split, margin and cluster bootstrap "
-         r"(single released checkpoint, so no seed pooling). Pre-stated prediction: equivalent on CAMELYON16; "
+         r"(single released checkpoint, so no seed pooling). Pre-specified prediction: equivalent on CAMELYON16; "
          r"not equivalent on at least one of CAMELYON17 and PANDA.}\label{tab:external}",
          r"\begin{tabular}{@{}lrrrrrc@{}}", r"\toprule",
          r"Task & $m_T$ & $m_S$ & $d$ & 90\,\% CI & $\delta_{\min}$ & verdict\\", r"\midrule"]
