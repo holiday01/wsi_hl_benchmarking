@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+"""Atlas tables and result macros from outputs/v5/summary (run after aggregate.py).
+
+  paper_jbhi/tables/table3_verdicts.tex  main-text verdict counts per task (label tab:verdicts)
+  <out>/atlas_<task>.tex      one longtable per task, 36 (teacher, student) pairs, seed-pooled
+  <macros>                    \\newcommand lines: \\inflMedian, \\nEquiv<Task>, \\nIneq<Task>, \\nInc<Task>,
+                              \\nPairs<Task>, \\deltaMinMedian<Task>
+
+Usage: python scripts/eval_v5/make_atlas_tables.py [--summary outputs/v5/summary]
+         [--out paper_jbhi/supplement/tables] [--macros paper_jbhi/macros_results.tex]
+"""
+import argparse, json, statistics
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parent.parent
+ORDER = ["phikon", "phikon-v2", "conch", "uni", "uni2-h", "prov-gigapath", "virchow", "virchow2",
+         "h-optimus-0", "hibou-b", "hibou-l", "midnight"]
+NAME = {"phikon": "Phikon", "phikon-v2": "Phikon-v2", "conch": "CONCH", "uni": "UNI", "uni2-h": "UNI2-h",
+        "prov-gigapath": "Prov-GigaPath", "virchow": "Virchow", "virchow2": "Virchow2",
+        "h-optimus-0": "H-optimus-0", "hibou-b": "Hibou-B", "hibou-l": "Hibou-L", "midnight": "Midnight-12k"}
+STUDENTS = ["vit-tiny", "vit-small", "vit-base"]   # keys as in summary_all.json and outputs/v5/<teacher>/<student>
+SNAME = {"vit-tiny": "ViT-Ti", "vit-small": "ViT-S", "vit-base": "ViT-B"}
+TASK_NAME = {"c16": "CAMELYON16 (slide cluster)", "c17_loco": "CAMELYON17 leave-one-centre-out (slide cluster)",
+             "panda": "PANDA tile-level (biopsy cluster)", "panda_biopsy_tissue": "PANDA whole-biopsy grading (tissue tiles)",
+             "panda_biopsy": "PANDA biopsy-level, annotation-selected tiles (supplementary variant)",
+             "msi": "Kather-MSI (patient cluster)", "center": "TCGA-BRCA site (slide cluster)",
+             "crc7k": "CRC-VAL-HE-7K (tile; no patient identifier released)", "pannuke_seg": "PanNuke patch-level nuclear classes (image cluster)"}
+# main-text tasks; the whole-biopsy task (tissue tiles) replaced the annotation-selected variant (analysis plan section 7.1)
+TASK_ORDER = ["c16", "c17_loco", "panda", "panda_biopsy_tissue", "msi", "center", "crc7k", "pannuke_seg"]
+ATLAS_ORDER = TASK_ORDER + ["panda_biopsy"]
+MACRO_KEY = {"c16": "CSixteen", "c17_loco": "CSeventeen", "panda": "Panda", "panda_biopsy_tissue": "PandaBiopsy",
+             "msi": "Msi", "center": "Center", "crc7k": "Crc", "pannuke_seg": "Pannuke"}
+NO_CLUSTER = {"crc7k", "panda_biopsy", "panda_biopsy_tissue"}   # inflation is 1 by construction
+
+
+def state_sym(s):
+    return {"equivalent": "E", "inequivalent": "I", "inconclusive": "?"}.get(s, s)
+
+
+def atlas_table(task, rows):
+    by = {(r["teacher"], r["student"]): r for r in rows}
+    # PanNuke d is the per-image paired difference over images scored for both models (aggregate.py), not m_S - m_T
+    dexpr = (r"$d$, the mean per-image paired difference over images scored for both models (which can differ from "
+             r"$m_S-m_T$ by up to 0.002),") if task == "pannuke_seg" else r"$d=m_S-m_T$"
+    L = [r"\begin{longtable}{@{}llrrrrrrcc@{}}",
+         r"\caption{Atlas, %s: teacher metric $m_T$, student metric $m_S$ (mean over seeds), %s with the "
+         r"seed-pooled 90\,\%% cluster interval, inflation (median over seeds of SE$_{\text{cluster}}$/SE$_{\text{tile}}$; --: not computed for PanNuke, where no tile bootstrap is run, or undefined where the tile SE is zero for some seeds), "
+         r"$\delta_{\min}$, verdict (E equivalent, I inequivalent, ? inconclusive at $\delta=0.05$) and whether the "
+         r"TOST $p$ survives Benjamini--Hochberg within the teacher and task.}\label{tab:atlas_%s}\\" % (TASK_NAME[task], dexpr, task),
+         r"\toprule Teacher & Student & $m_T$ & $m_S$ & $d$ & 90\,\% CI & infl. & $\delta_{\min}$ & verdict & BH\\ \midrule",
+         r"\endfirsthead", r"\toprule Teacher & Student & $m_T$ & $m_S$ & $d$ & 90\,\% CI & infl. & $\delta_{\min}$ & verdict & BH\\ \midrule",
+         r"\endhead", r"\bottomrule", r"\endfoot"]
+    for t in ORDER:
+        for s in STUDENTS:
+            r = by.get((t, s))
+            if r is None:   # every pair exists in v5; a miss means a key mismatch, not a missing run
+                raise KeyError(f"atlas: no summary row for {(t, s)} in task {task}")
+            infl = statistics.median(r["inflation_per_seed"]) if r.get("inflation_per_seed") else float("nan")
+            dmin = max(abs(r["lo"]), abs(r["hi"]))
+            L.append(f"{NAME[t]} & {SNAME[s]} & {r['t_metric']:.3f} & {r['s_metric_mean']:.3f} & {r['d_pooled']:+.3f} & "
+                     f"[{r['lo']:+.3f}, {r['hi']:+.3f}] & {'--' if infl != infl else f'{infl:.2f}'} & {dmin:.3f} & {state_sym(r['state'])} & "
+                     f"{'yes' if r.get('bh_reject') else 'no'}\\\\")
+    L.append(r"\end{longtable}")
+    return "\n".join(L) + "\n"
+
+
+def macros(summary):
+    L = ["% generated by scripts/eval_v5/make_atlas_tables.py -- do not edit"]
+    infl_all = []
+    for task in TASK_ORDER:
+        rows = summary.get(task)
+        if not rows:
+            continue
+        k = MACRO_KEY[task]
+        n = {s: sum(1 for r in rows if r["state"] == s) for s in ("equivalent", "inequivalent", "inconclusive")}
+        dmin = statistics.median(max(abs(r["lo"]), abs(r["hi"])) for r in rows)
+        L += [f"\\newcommand{{\\nPairs{k}}}{{{len(rows)}}}",
+              f"\\newcommand{{\\nEquiv{k}}}{{{n['equivalent']}}}",
+              f"\\newcommand{{\\nIneq{k}}}{{{n['inequivalent']}}}",
+              f"\\newcommand{{\\nInc{k}}}{{{n['inconclusive']}}}",
+              f"\\newcommand{{\\deltaMinMedian{k}}}{{{dmin:.3f}}}"]
+        if task not in NO_CLUSTER:
+            for r in rows:
+                infl_all += r.get("inflation_per_seed", [])
+    if infl_all:
+        L.append(f"\\newcommand{{\\inflMedian}}{{{statistics.median(infl_all):.1f}}}")
+        L.append(f"\\newcommand{{\\inflMin}}{{{min(infl_all):.1f}}}")
+        L.append(f"\\newcommand{{\\inflMax}}{{{max(infl_all):.1f}}}")
+    return "\n".join(L) + "\n"
+
+
+HIER = json.loads((ROOT / "outputs" / "v5" / "secondary" / "hier_bh_margins.json").read_text())  # hier_bh_margins.py
+
+
+def verdict_table(summary):
+    """Main-text Table: per task, pairs and seed-pooled verdict counts at the pre-specified margin, median delta_min, median SE inflation."""
+    short = {"c17_loco": "CAMELYON17 LOCO", "panda": "PANDA tile", "panda_biopsy_tissue": "PANDA biopsy",
+             "center": "TCGA-BRCA site", "pannuke_seg": "PanNuke"}
+    L = [r"\begin{table}[t]", r"\centering\footnotesize\setlength{\tabcolsep}{3.5pt}",
+         r"\caption{Seed-pooled verdicts per task at the pre-specified margin $\delta=\margin$ (36 teacher--student pairs per task where all runs finished). "
+         r"$\delta_{\min}$: smallest margin at which a pair would be certified, median over pairs; inflation: cluster over tile standard error, median over runs; about 1 by construction where no cluster identifier exists or the cluster is the unit; --: not computed (PanNuke). E: equivalent; E$_{\mathrm{H}}$: after hierarchical Benjamini--Hochberg correction (teacher-on-task families); I$^-$, I$^+$: inequivalent, student below or above teacher; Inc.: inconclusive.}",
+         r"\label{tab:verdicts}", r"\begin{tabular}{@{}lrrrrrrrr@{}}", r"\toprule",
+         r"Task & Pairs & E & E$_{\mathrm{H}}$ & I$^-$ & I$^+$ & Inc. & $\tilde\delta_{\min}$ & Infl.\\", r"\midrule"]
+    for task in TASK_ORDER:
+        rows = summary.get(task)
+        if not rows:
+            continue
+        n = {s: sum(1 for r in rows if r["state"] == s) for s in ("equivalent", "inequivalent", "inconclusive")}
+        n_bh = HIER["per_task"][task]["equivalent_hier_task"]
+        n_inf = sum(1 for r in rows if r["state"] == "inequivalent" and r["hi"] < 0)
+        n_sup = n["inequivalent"] - n_inf
+        dmin = statistics.median(max(abs(r["lo"]), abs(r["hi"])) for r in rows)
+        infl = [v for r in rows for v in (r.get("inflation_per_seed") or []) if v is not None and v == v]
+        inf_s = f"{statistics.median(infl):.1f}" if infl else "--"
+        L.append(f"{short.get(task, TASK_NAME[task].split(' (')[0])} & {len(rows)} & {n['equivalent']} & {n_bh} & {n_inf} & {n_sup} & {n['inconclusive']} & {dmin:.3f} & {inf_s}\\\\")
+    L += [r"\bottomrule", r"\end{tabular}", r"\end{table}"]
+    return "\n".join(L) + "\n"
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--summary", default=str(ROOT / "outputs" / "v5" / "summary"))
+    ap.add_argument("--out", default=str(ROOT / "paper_jbhi" / "supplement" / "tables"))
+    ap.add_argument("--macros", default=str(ROOT / "paper_jbhi" / "macros_results.tex"))
+    ap.add_argument("--verdicts", default=str(ROOT / "paper_jbhi" / "tables" / "table3_verdicts.tex"))
+    a = ap.parse_args()
+    summary = json.loads((Path(a.summary) / "summary_all.json").read_text())
+    out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
+    for task in ATLAS_ORDER:
+        if summary.get(task):
+            (out / f"atlas_{task}.tex").write_text(atlas_table(task, summary[task]))
+    Path(a.macros).write_text(macros(summary))
+    Path(a.verdicts).write_text(verdict_table(summary))
+    print("tasks:", [t for t in TASK_ORDER if summary.get(t)], "->", out, a.macros)
+
+
+if __name__ == "__main__":
+    main()
