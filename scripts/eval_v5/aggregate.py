@@ -24,7 +24,23 @@ from run_probes import TASKS, metric  # noqa: E402
 from stats_v4 import hierarchical_bh  # noqa: E402
 
 
-def pooled_bootstrap(y, pt, ps_list, clusters, classes, kind, margin, n_boot=1000, seed=42, seed_mode="draw"):
+def interval_from(dc, center, margin, interval="percentile"):
+    """Verdict, 90% interval and TOST p from bootstrap replicates dc. percentile (pre-specified): quantiles of dc and
+    uncentred tail fractions; basic (sensitivity): replicates centred on the estimate, 2*center - quantiles, and
+    tail fractions of dc - center beyond center +/- margin (the test that inverts the basic interval)."""
+    q05, q95 = float(np.quantile(dc, 0.05)), float(np.quantile(dc, 0.95)); n = len(dc)
+    if interval == "basic":
+        lo, hi = 2 * center - q95, 2 * center - q05; e = dc - center
+        p_l = float((np.sum(e >= center + margin) + 1) / (n + 1)); p_u = float((np.sum(e <= center - margin) + 1) / (n + 1))
+    else:
+        lo, hi = q05, q95
+        p_l = float((np.sum(dc <= -margin) + 1) / (n + 1)); p_u = float((np.sum(dc >= margin) + 1) / (n + 1))
+    state = "equivalent" if (lo > -margin and hi < margin) else ("inequivalent" if (hi < -margin or lo > margin) else "inconclusive")
+    return dict(lo=lo, hi=hi, state=state, p_lower=p_l, p_upper=p_u, p_tost=max(p_l, p_u))
+
+
+def pooled_bootstrap(y, pt, ps_list, clusters, classes, kind, margin, n_boot=1000, seed=42, seed_mode="draw",
+                     interval="percentile", keep=None):
     uniq = np.unique(clusters); by = {g: np.flatnonzero(clusters == g) for g in uniq}
     rng = np.random.default_rng(seed); dc = []
     for _ in range(n_boot):
@@ -37,15 +53,15 @@ def pooled_bootstrap(y, pt, ps_list, clusters, classes, kind, margin, n_boot=100
             v = metric(y[idx], ps[idx], classes, kind) - metric(y[idx], pt[idx], classes, kind)
         if np.isfinite(v):
             dc.append(v)
+    if keep is not None:
+        keep.append(np.asarray(dc, float))
     d_seeds = [metric(y, ps, classes, kind) - metric(y, pt, classes, kind) for ps in ps_list]
     out = {"d_pooled": float(np.mean(d_seeds)), "d_seed_sd": float(np.std(d_seeds, ddof=1)) if len(d_seeds) > 1 else 0.0,
            "n_seeds": len(ps_list), "n_clusters": int(len(uniq))}
     if len(dc) < 50:
         out.update(lo=float("nan"), hi=float("nan"), state="undefined", p_tost=float("nan")); return out
-    dc = np.asarray(dc); lo, hi = float(np.quantile(dc, 0.05)), float(np.quantile(dc, 0.95))
-    state = "equivalent" if (lo > -margin and hi < margin) else ("inequivalent" if (hi < -margin or lo > margin) else "inconclusive")
-    p_l = float((np.sum(dc <= -margin) + 1) / (len(dc) + 1)); p_u = float((np.sum(dc >= margin) + 1) / (len(dc) + 1))
-    out.update(lo=lo, hi=hi, se_cluster_seed=float(dc.std(ddof=1)), state=state, p_lower=p_l, p_upper=p_u, p_tost=max(p_l, p_u))
+    dc = np.asarray(dc)
+    out.update(interval_from(dc, out["d_pooled"], margin, interval), se_cluster_seed=float(dc.std(ddof=1)))
     return out
 
 
@@ -56,14 +72,17 @@ def main():
     ap.add_argument("--n_boot", type=int, default=1000)
     ap.add_argument("--seed_mode", default="draw", choices=["draw", "mean"],
                     help="draw: one seed per replicate (pre-specified); mean: mean of the seeds' d (sensitivity)")
+    ap.add_argument("--interval", default="percentile", choices=["percentile", "basic"],
+                    help="percentile (pre-specified) or basic, centred on the estimate (sensitivity)")
     ap.add_argument("--tasks", default=None, help="comma-separated subset of tasks")
+    ap.add_argument("--save_replicates", default=None, help="also write every pair's bootstrap d replicates to this .npz")
     args = ap.parse_args()
     out = Path(args.out); out.mkdir(parents=True, exist_ok=True)
     runs = sorted(glob.glob(f"{args.root}/*/*/seed*"))
     groups = defaultdict(list)                                  # (teacher, student) -> run dirs
     for r in runs:
         p = Path(r); groups[(p.parent.parent.name, p.parent.name)].append(r)
-    all_rows = {}
+    all_rows = {}; reps = []                                   # (task, teacher, student, replicates)
     for task in (args.tasks.split(",") if args.tasks else list(TASKS) + ["pannuke_seg"]):
         rows = []
         for (teacher, student), dirs in sorted(groups.items()):
@@ -84,11 +103,9 @@ def main():
                     else:
                         s = s_list[rng.integers(0, len(s_list))]
                         dc.append(np.nanmean(s[idx] - t[idx]))
-                dc = np.asarray(dc); m = 0.05; lo, hi = float(np.quantile(dc, .05)), float(np.quantile(dc, .95))
-                row.update(d_pooled=float(np.mean([np.nanmean(s - t) for s in s_list])), lo=lo, hi=hi,
+                dc = np.asarray(dc); reps.append((task, teacher, student, dc.astype(float))); d_pooled = float(np.mean([np.nanmean(s - t) for s in s_list]))
+                row.update(interval_from(dc, d_pooled, 0.05, args.interval), d_pooled=d_pooled,
                            d_seed_sd=float(np.std([np.nanmean(s - t) for s in s_list], ddof=1)) if len(s_list) > 1 else 0.0,
-                           state="equivalent" if (lo > -m and hi < m) else ("inequivalent" if (hi < -m or lo > m) else "inconclusive"),
-                           p_tost=max(float((np.sum(dc <= -m) + 1) / (len(dc) + 1)), float((np.sum(dc >= m) + 1) / (len(dc) + 1))),
                            n_seeds=len(s_list), t_metric=float(np.nanmean(t)), s_metric_mean=float(np.mean([np.nanmean(s) for s in s_list])))
             else:
                 spec = TASKS[task]
@@ -96,8 +113,10 @@ def main():
                 y, pt, cl, classes = preds[0]["y"], preds[0]["pt"], preds[0]["clusters"], preds[0]["classes"]
                 for z in preds[1:]:
                     assert np.array_equal(z["te_idx"], preds[0]["te_idx"]) and np.allclose(z["pt"], pt, atol=1e-5)
+                keep = []
                 res = pooled_bootstrap(y, pt, [z["ps"] for z in preds], cl, classes, spec["metric"], spec["margin"], args.n_boot,
-                                       seed_mode=args.seed_mode)
+                                       seed_mode=args.seed_mode, interval=args.interval, keep=keep)
+                reps.append((task, teacher, student, keep[0]))
                 row.update(res, d_per_seed=[r["result"]["d"] for _, r in recs], state_per_seed=[r["result"]["state"] for _, r in recs],
                            inflation_per_seed=[r["result"].get("inflation") for _, r in recs],
                            t_metric=recs[0][1]["result"]["t_metric"],
@@ -124,6 +143,15 @@ def main():
         print(f"[{task}] {len(rows)} pairs: {dict(Counter(r['state'] for r in rows))}", flush=True)
         all_rows[task] = rows
     json.dump(all_rows, open(out / "summary_all.json", "w"), indent=1, default=float)
+    if args.save_replicates:
+        # one row per pair, NaN-padded (replicates with an undefined metric are dropped, as in the interval)
+        n = max(len(r[3]) for r in reps); D = np.full((len(reps), n), np.nan)
+        for i, r in enumerate(reps):
+            D[i, :len(r[3])] = r[3]
+        np.savez_compressed(args.save_replicates, d_replicates=D, n_valid=np.array([len(r[3]) for r in reps]),
+                            task=np.array([r[0] for r in reps]), teacher=np.array([r[1] for r in reps]),
+                            student=np.array([r[2] for r in reps]), bootstrap_seed=42, n_boot=args.n_boot,
+                            seed_mode=args.seed_mode, interval=args.interval)
 
 
 if __name__ == "__main__":

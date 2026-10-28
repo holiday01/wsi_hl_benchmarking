@@ -8,3 +8,4 @@ __pycache__/
 paper_jbhi/
 research/
 .DS_Store
+.pytest_cache/

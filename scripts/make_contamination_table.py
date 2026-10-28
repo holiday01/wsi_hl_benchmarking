@@ -17,7 +17,12 @@ ORDER = ["Phikon", "Phikon-v2", "CONCH", "UNI", "UNI2-H", "Prov-GigaPath", "Virc
          "H-Optimus-0", "Hibou-B", "Hibou-L", "Midnight"]
 SHOW = {"UNI2-H": "UNI2-h", "H-Optimus-0": "H-optimus-0", "Midnight": "Midnight-12k"}
 COHORTS = ["C16", "TCGA-BRCA", "NCT-CRC", "Kather-MSI", "PanNuke", "NCT-VAL"]
-SYM = {"✓": r"$\bullet$", "↔": r"$\circ$", "✗": "--", "?": "?"}
+SYM = {"✓": r"$\bullet$", "↔": r"$\circ$", "✗": "--", "?": "?", "x": r"$\times$"}
+# How a source-file ✗ (cohort not in the corpus) is shown. Default "--": the corpus is a single named institution or an
+# enumerated public list that does not contain the cohort. UNI: the model card names public collections that were not
+# used ("open datasets and large public histology slide collections"). CONCH (PubMed figure-caption pairs) and Virchow2
+# ("MSKCC and partner institutions") have open-ended corpora, so absence of a mention is not evidence of disjointness.
+ABSENT_AS = {"UNI": "x", "CONCH": "?", "Virchow2": "?"}
 CORPUS = {  # one-line corpus descriptions, from the Corpus: lines of the source file
     "Phikon": "TCGA, 6,093 WSIs, 16 cancer types", "Phikon-v2": "PANCAN-XL, 58,359 WSIs, 136 public and internal sets",
     "CONCH": "in-house 21,442 WSIs; 1.17M image--caption pairs", "UNI": "Mass-100K (MGH, BWH, GTEx)",
@@ -42,15 +47,17 @@ def main():
     marks = parse()
     cols = ["C16", "C17", "PANDA", "NCT-CRC", "NCT-VAL", "Kather-MSI", "PanNuke", "TCGA-BRCA"]
     L = [r"\begin{table}[h]\centering\footnotesize\setlength{\tabcolsep}{2.5pt}",
-         r"\caption{Teacher pretraining corpora and disclosed overlap with the evaluation cohorts. "
-         r"$\bullet$ = cohort disclosed as part of the corpus; $\circ$ = cohort derived from TCGA slides that are in the corpus; "
-         r"-- = corpus disclosed as disjoint; ? = proprietary or undisclosed. All marks were verified against the developers' "
-         r"papers and model cards; several teachers used CAMELYON- or PANDA-derived patches for evaluation only. Overlap may raise the "
+         r"\caption{Teacher pretraining corpora and overlap with the evaluation cohorts, by strength of evidence. "
+         r"$\bullet$ in the disclosed corpus; $\circ$ possible same-source overlap (cohort derived from TCGA, TCGA in the corpus); "
+         r"$\times$ excluded by an explicit developer statement; -- not in a corpus disclosed as one institution or an enumerated "
+         r"list (absence from the list, not verified disjointness); ? proprietary, undisclosed or open-ended corpus (CONCH: PubMed "
+         r"figures; Virchow2: partner institutions). Several teachers used CAMELYON- or PANDA-derived patches for evaluation only. Overlap may raise the "
          r"teacher's absolute score and the task ceiling and so bias $d$ against the student (not measured).}\label{tab:s_sources}",
          r"\begin{tabular}{@{}llcccccccc@{}}", r"\toprule",
          "Teacher & Corpus (as disclosed) & " + " & ".join(cols) + r"\\", r"\midrule"]
     for t in ORDER:
         m = marks[t]
+        m = {c: (ABSENT_AS.get(t, "✗") if v == "✗" else v) for c, v in m.items()}
         row = {"C16": SYM[m["C16"]], "C17": SYM[m["C17"]], "PANDA": SYM[m["PANDA"]],
                "NCT-CRC": SYM[m["NCT-CRC"]], "NCT-VAL": SYM[m["NCT-VAL"]], "Kather-MSI": SYM[m["Kather-MSI"]],
                "PanNuke": SYM[m["PanNuke"]], "TCGA-BRCA": SYM[m["TCGA-BRCA"]]}

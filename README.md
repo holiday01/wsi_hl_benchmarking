@@ -20,7 +20,8 @@ on eight frozen-probe tasks. The run records, pooled summaries and per-pair atla
 | `scripts/run_v5_pipeline.sh` | The whole study end to end (corpus, teacher caches, 108 runs, features, probes, summary) |
 | `scripts/eval_v5/*.py`, `scripts/figures/` | Secondary and sensitivity analyses, tables and figures |
 | `configs/corpus_v5.json` | Sources of the distillation corpus |
-| `data/manifests/` | Slide and biopsy lists with checksums used for selection |
+| `data/manifests/` | Slide, biopsy and tile lists of every evaluation subset (CAMELYON16 and Kather-MSI with per-tile SHA-256; Kather-MSI tiles matched to their source files) |
+| `data/teacher_params_macs.json` | Exact parameter counts and partial MAC counts of Table I (`scripts/compute_fm_flops_consistent.py`) |
 | `tests/` | CPU unit tests of the teacher preprocessing (no weights needed) |
 
 ## 1. Environment

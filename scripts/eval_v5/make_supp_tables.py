@@ -119,7 +119,7 @@ def teacher_side_table(d, secondary=None):
     L = [r"\begin{table}[h]\centering\small",
          r"\caption{Teacher-side uncertainty (no student involved): ratio of the cluster to the tile bootstrap standard error of the teacher metric "
          r"(median and range over the 12 teachers), ICC(1) of the teacher's correct-class probability within clusters, design effect, and the number of the "
-         r"66 teacher pairs whose difference is significant under the tile versus the cluster 90\,\% interval (from the registered ranking analysis, Table~\ref{tab:s_ranking}); the CRC-VAL-HE-7K SE ratio is over the 9 teachers with non-zero tile SE. SE ratio, ICC(1) and design effect come from the teacher-only run made during student training, before any student probe; the registered post-probe runs differ by bootstrap draw (CAMELYON16 design effect 68.8 in \texttt{atlas.pdf}; the teacher-only run separates 51/28 pairs).}\label{tab:s_teacher_side}",
+         r"66 teacher pairs whose difference is significant under the tile versus the cluster 90\,\% interval (from the pre-specified ranking analysis, \texttt{atlas.pdf}); the CRC-VAL-HE-7K SE ratio is over the 9 teachers with non-zero tile SE. SE ratio, ICC(1) and design effect come from the teacher-only run made during student training, before any student probe; the pre-specified post-probe runs differ by bootstrap draw (CAMELYON16 design effect 68.8 in \texttt{atlas.pdf}; the teacher-only run separates 51/28 pairs).}\label{tab:s_teacher_side}",
          r"\begin{tabular}{@{}lrrrrr@{}}", r"\toprule",
          r"Task & SE ratio & ICC(1) & design effect & sig.\ pairs (tile) & sig.\ pairs (cluster)\\", r"\midrule"]
     for t in ["c16", "msi", "center", "crc7k"]:

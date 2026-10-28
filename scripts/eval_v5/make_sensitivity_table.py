@@ -16,7 +16,8 @@ VARIANTS = [("Main", "outputs/v5/summary/summary_all.json"),
             ("Seed mean", "outputs/v5_sens/seed_mean/summary_all.json"),
             ("$C=0.1$", "outputs/v5_sens/C0.1/summary/summary_all.json"),
             ("$C=10$", "outputs/v5_sens/C10/summary/summary_all.json"),
-            ("Site by patient", "outputs/v5_sens/site_patient/summary/summary_all.json")]
+            ("Site by patient", "outputs/v5_sens/site_patient/summary/summary_all.json"),
+            ("Centred", "outputs/v5_sens/basic/summary_all.json")]
 
 
 def cell(rows):
@@ -33,6 +34,7 @@ def main():
          r"\caption{Sensitivity of the seed-pooled verdicts at $\delta=0.05$ (36 pairs per task; equivalent/inferior/superior/inconclusive). "
          r"Main: pre-specified analysis (probe $C=1$, one seed drawn per bootstrap replicate, site folds by slide). Seed mean: interval for the mean of the three seeds' $d$. "
          r"$C=0.1$, $C=10$: every classification probe refitted (PanNuke not refitted). Site by patient: site-task folds grouped by patient. "
+         r"Centred: the same bootstrap replicates centred on the estimate (basic interval, centred tail $p$-values) instead of the pre-specified percentile interval. "
          r"These analyses were run after the main results. --: not run.}\label{tab:s_sensitivity}",
          r"\begin{tabular}{@{}l" + "r" * len(data) + r"@{}}", r"\toprule",
          "Task & " + " & ".join(n for n, _ in data) + r"\\", r"\midrule"]

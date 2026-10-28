@@ -1,0 +1,72 @@
+{
+ "_convention": "params: parameters of the image encoder as loaded by scripts/distill_wsi_model.py (released weights). gmacs: torch.utils.flop_counter.FlopCounterMode total / 2 at 224x224, batch 1 (scripts/compute_fm_flops_consistent.py). QK^T and AV products inside fused scaled-dot-product attention are not counted; the Hibou models run eager attention and are converted to the same convention by subtracting 2 x layers x 261^2 x width.",
+ "models": {
+  "student_vit-tiny": {
+   "params": 5573824,
+   "gmacs": 1.075
+  },
+  "student_vit-small": {
+   "params": 21764224,
+   "gmacs": 4.241
+  },
+  "student_vit-base": {
+   "params": 85995520,
+   "gmacs": 16.848
+  },
+  "phikon": {
+   "params": 85798656,
+   "gmacs": 16.848
+  },
+  "phikon-v2": {
+   "params": 303351808,
+   "gmacs": 59.646
+  },
+  "uni": {
+   "params": 303350784,
+   "gmacs": 59.646
+  },
+  "uni2-h": {
+   "params": 681394176,
+   "gmacs": 180.293
+  },
+  "virchow": {
+   "params": 631229184,
+   "gmacs": 161.967
+  },
+  "virchow2": {
+   "params": 631239424,
+   "gmacs": 164.485
+  },
+  "h-optimus-0": {
+   "params": 1134774272,
+   "gmacs": 295.804
+  },
+  "prov-gigapath": {
+   "params": 1134953984,
+   "gmacs": 223.326
+  },
+  "hibou-b": {
+   "params": 85741056,
+   "gmacs": 22.284,
+   "gmacs_eager": 23.539
+  },
+  "hibou-l": {
+   "params": 303659264,
+   "gmacs": 79.076,
+   "gmacs_eager": 82.424
+  },
+  "conch": {
+   "params": 86250240,
+   "gmacs": 16.848
+  },
+  "midnight": {
+   "params": 1136480768,
+   "gmacs": 291.274
+  },
+  "h0-mini": {
+   "params": 85741056,
+   "gmacs": 22.284,
+   "note": "external student; counted with the same script"
+  }
+ }
+}
