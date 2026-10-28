@@ -31,7 +31,7 @@ Tested with Python 3.12, PyTorch 2.11 (CUDA 13.0) on one NVIDIA RTX 5090 (32 GB)
 python3.12 -m venv ~/venvs/kd && source ~/venvs/kd/bin/activate
 pip install torch==2.11.0 torchvision==0.26.0 --index-url https://download.pytorch.org/whl/cu130
 pip install -r requirements.txt
-pytest -q tests          # 37 tests, CPU only
+pytest -q tests          # 37 tests (33 teacher-preprocessing, 4 pipeline), CPU only
 ```
 
 Hardware used for the study: a ViT-B student needs about 18 GB of GPU memory in fp32 at batch size 128 (ViT-S about
@@ -173,7 +173,7 @@ analysis plan and teacher-side analyses from `research/`; both are provided by t
 ## Data
 
 Run records, seed-pooled summaries, secondary, sensitivity and ablation analyses, the analysis plan and the per-pair
-atlas: https://doi.org/10.5281/zenodo.23718050
+atlas: https://doi.org/10.5281/zenodo.23718049
 
 ## Licence
 
